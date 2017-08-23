@@ -4,6 +4,9 @@ from openprocurement.auction.utils import calculate_hash
 
 from robot.libraries.BuiltIn import BuiltIn
 from Selenium2Library import utils
+from base64 import b64encode
+from libnacl.sign import Signer
+from urllib import quote
 
 positions = [(0, 0), (960, 0), (0, 540), (960, 540)]
 size = (960, 1000)
@@ -20,9 +23,11 @@ def prepare_users_data(tender_data):
         auction_worker_defaults_info = json.load(auction_worker_defaults_file)
     users_data = {}
     for index, bid in enumerate(tender_data["bids"]):
+        signer = Signer(auction_worker_defaults_info["SIGNATURE_KEY"].decode('hex'))
+        signature = quote(b64encode(signer.signature(str(bid['id']))))
         users_data[bid["id"]] = {
-            'login_url': auction_worker_defaults_info['AUCTIONS_URL'].format(auction_id="11111111111111111111111111111111") +  '/login?bidder_id={}&hash={}'.format(
-                bid["id"], calculate_hash(bid["id"], auction_worker_defaults_info["HASH_SECRET"])
+            'login_url': auction_worker_defaults_info['AUCTIONS_URL'].format(auction_id="11111111111111111111111111111111") +  '/login?bidder_id={}&signature={}'.format(
+                bid["id"], signature
             ),
             'amount': bid['value']['amount'],
             'position': positions[index],
